@@ -12,6 +12,7 @@
     "img-src": true,
     "img-title": true,
     "img-width-height": true,
+    "indent-char": "space-4",
     "lowercase-class-with-hyphen": true,
     "lowercase-id-with-hyphen": true,
     "rel-stylesheet": true,
@@ -19,5 +20,18 @@
     "title-required": true,
     "unique-id": true,
     "viewport": true,
-    "max-len": 120
+    "max-len": 120,
+
+    "attr-lowercase": true,
+    "attr-no-duplication": true,
+    "attr-unsafe-chars": true,
+    "attr-value-double-quotes": true,
+    "id-class-ad-disabled": true,
+    "spec-char-escape": true,
+    "style-disabled": true,
+    "tag-pair": true,
+    "tagname-lowercase": true,
+
+    "script-content": true,
+    "style-content": true
 }

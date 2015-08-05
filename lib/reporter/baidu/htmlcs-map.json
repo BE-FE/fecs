@@ -12,6 +12,7 @@
     "img-src": "036",
     "img-title": "037",
     "img-width-height": "039",
+    "indent-char": "001",
     "lowercase-class-with-hyphen": "003",
     "lowercase-id-with-hyphen": "006",
     "rel-stylesheet": "026",
@@ -21,5 +22,15 @@
         "025": "033"
     },
     "unique-id": "005",
-    "viewport": "035"
+    "viewport": "035",
+
+    "attr-lowercase": "017",
+    "attr-no-duplication": "997",
+    "attr-unsafe-chars": "998",
+    "attr-value-double-quotes": "018",
+    "id-class-ad-disabled": "998",
+    "spec-char-escape": "997",
+    "style-disabled": "028",
+    "tag-pair": "012",
+    "tagname-lowercase": "010"
 }

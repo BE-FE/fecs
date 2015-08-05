@@ -25,16 +25,26 @@ var streams = {
      * @return {Transform} 转换流
      */
     files: function (options) {
-        var patterns = util.buildPattern(options._, options.types);
+        var patterns = util.buildPattern(options._, options.type);
         var specials = patterns.specials;
         delete patterns.specials;
 
+        var output = options.output;
+
+        if (options.replace || /^\.\/?$/.test(options.output)) {
+            output = './';
+        }
+        // ignore output path auto
+        else {
+            patterns.push(('!./' + output + '/**').replace(/\/\.\//, '\/'));
+        }
+
         return fs.src(patterns, {cwdbase: true})
             .pipe(ignored(options, specials))
-            .pipe(jsformatter(options))
-            .pipe(cssformatter(options))
-            .pipe(htmlformatter(options))
-            .pipe(fs.dest(options.output));
+            .pipe(jsformatter.exec(options))
+            .pipe(cssformatter.exec(options))
+            .pipe(htmlformatter.exec(options))
+            .pipe(fs.dest(output));
     },
 
     /**
@@ -48,15 +58,30 @@ var streams = {
         var File = require('vinyl');
 
         var type = (options.type || 'js').split(',')[0];
-        var handler = type === 'js' ? jsformatter(options) : (type === 'css' ? cssformatter(options) : through());
+        var handlers = {
+            js: function () {
+                return jsformatter.exec(options);
+            },
+            css: function () {
+                return cssformatter.exec(options);
+            },
+            less: function () {
+                return cssformatter.exec(options);
+            },
+            html: function () {
+                return htmlformatter.exec(options);
+            }
+        };
+
+        var handler = handlers[type] || through;
 
         return process.stdin
             .pipe(
                 through.obj(function (chunk, enc, cb) {
-                    cb(null, new File({contents: chunk, path: 'current-file.' + type}));
+                    cb(null, new File({contents: chunk, path: 'current-file.' + type, stat: {size: chunk.length}}));
                 }
             ))
-            .pipe(handler)
+            .pipe(handler())
             .pipe(
                 through.obj(function (file, enc, cb) {
                     process.stdout.write(file.contents.toString() + '\n');
@@ -70,12 +95,16 @@ var streams = {
  * format 处理入口
  *
  * @param {Object} options minimist 处理后的 cli 参数
- */
-exports.run = function (options) {
-    console.time('fecs');
+ * @param {Function=} done 处理完成后的回调
+ * @return {Transform} 转换流
+*/
+exports.run = function (options, done) {
+    var name = require('../').leadName;
+    console.time(name);
 
-    streams[options.stream ? 'stdin' : 'files'](options)
+    return streams[options.stream ? 'stdin' : 'files'](options)
         .once('end', function () {
-            console.timeEnd('fecs');
+            console.timeEnd(name);
+            done && done();
         });
 };

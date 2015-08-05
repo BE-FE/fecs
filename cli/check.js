@@ -9,6 +9,7 @@ var util        = require('../lib/util');
 var ignored     = require('../lib/ignored');
 var jschecker   = require('../lib/js/checker');
 var csschecker  = require('../lib/css/checker');
+var lesschecker = require('../lib/less/checker');
 var htmlchecker = require('../lib/html/checker');
 
 /**
@@ -31,9 +32,10 @@ var streams = {
 
         return fs.src(patterns, {cwdbase: true})
             .pipe(ignored(options, specials))
-            .pipe(jschecker(options))
-            .pipe(csschecker(options))
-            .pipe(htmlchecker(options));
+            .pipe(jschecker.exec(options))
+            .pipe(csschecker.exec(options))
+            .pipe(lesschecker.exec(options))
+            .pipe(htmlchecker.exec(options));
     },
 
     /**
@@ -46,16 +48,31 @@ var streams = {
         var through = require('through2');
         var File = require('vinyl');
 
-        var type = (options.t || options.type || 'js').split(',')[0];
-        var handler = type === 'js' ? jschecker(options) : (type === 'css' ? csschecker(options) : through());
+        var type = (options.type || 'js').split(',')[0];
+        var handlers = {
+            js: function () {
+                return jschecker.exec(options);
+            },
+            css: function () {
+                return csschecker.exec(options);
+            },
+            less: function () {
+                return lesschecker.exec(options);
+            },
+            html: function () {
+                return htmlchecker.exec(options);
+            }
+        };
+
+        var handler = handlers[type] || through;
 
         return process.stdin
             .pipe(
                 through.obj(function (chunk, enc, cb) {
-                    cb(null, new File({contents: chunk, path: 'current-file.' + type}));
+                    cb(null, new File({contents: chunk, path: 'current-file.' + type, stat: {size: chunk.length}}));
                 }
             ))
-            .pipe(handler);
+            .pipe(handler());
     }
 };
 
@@ -63,26 +80,32 @@ var streams = {
  * check 处理入口
  *
  * @param {Object} options minimist 处理后的 cli 参数
+ * @param {Function=} done 处理完成后的回调
+ * @return {Transform} 转换流
  */
-exports.run = function (options) {
-    console.time('fecs');
+exports.run = function (options, done) {
+    var name = require('../').leadName;
+
+    console.time(name);
 
     var log = require('../lib/log')(options.color);
     var reporter = require('../lib/reporter').get(log, options);
 
-    streams[options.stream ? 'stdin' : 'files'](options)
-        .pipe(reporter)
-        .once('end', function (success, json) {
-            console.timeEnd('fecs');
+    done = done || function (success, json) {
+        console.timeEnd(name);
 
-            if (options.format) {
-                var formatter = require('../lib/formatter');
+        if (options.format) {
+            var formatter = require('../lib/formatter/');
 
-                if (formatter[options.format]) {
-                    formatter[options.format](json);
-                }
+            if (formatter[options.format]) {
+                formatter[options.format](json);
             }
+        }
 
-            process.exit(success ? 0 : 1);
-        });
+        process.exit(success ? 0 : 1);
+    };
+
+    return streams[options.stream ? 'stdin' : 'files'](options)
+        .pipe(reporter)
+        .once('end', done);
 };
